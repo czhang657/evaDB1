@@ -1,4 +1,4 @@
-# evaDB1
+# evaDB1: New Search And Summary
 evaDB project 1 CS 4420: New Search And Summary
 
 Introduction and Expected Input and Output
