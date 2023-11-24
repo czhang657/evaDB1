@@ -8,6 +8,8 @@ from langchain.document_loaders import UnstructuredURLLoader
 from langchain.chains.summarize import load_summarize_chain
 import pandas as pd
 import streamlit as st, tiktoken
+from unidecode import unidecode
+from time import perf_counter
 
 import evadb
 
@@ -20,25 +22,38 @@ def receive_user_input():
     )
     SerperAPI = str(input(
             "Please enter your Serper API key: "))
+    timestamps = {}
+    t_i = 0
+
+    timestamps[t_i] = perf_counter()
     pdfFile = str(input(
             "Please enter your pdf path name: "))
     url = 'https://api.example.com/data'
-    # OpenAPI = str(
-    #     input(
-    #         "Please enter your OpenAI API key: "
-    #     )
-    # )
+    OpenAPI = str(
+        input(
+            "Please enter your OpenAI API key: "
+        )
+    )
+    t_i = t_i + 1
+    timestamps[t_i] = perf_counter()
     keyWord = str(
         input(
             "Please enter your key word: "
         )
     )
+    keyWord2 = str(
+        input(
+            "Please enter your need, search news or paper (enter s or p): "
+        )
+    )
+    t_i = t_i + 1
+    timestamps[t_i] = perf_counter()
 
 
     os.environ['pdf'] = pdfFile
     os.environ["SERPER_KEY"] = SerperAPI
-    # os.environ["OPEN_KEY"] = OpenAPI
-    return keyWord
+    os.environ["OPEN_KEY"] = OpenAPI
+    return keyWord, keyWord2
 
 def searchForNews(keyword, cursor):
     search = GoogleSerperAPIWrapper(type="news", tbs="qdr:w1", serper_api_key=os.environ["SERPER_KEY"])
@@ -65,8 +80,8 @@ def searchForNews(keyword, cursor):
         cursor.query(f"INSERT INTO News111 (title1, link, summary) VALUES ('{title}', '{link}', '{summary}')").df();
         cursor.query("SELECT * FROM News111").df()
 
-    cursor.query("DROP UDF IF EXISTS Similarity;").execute()
-    Similarity_function_query = """CREATE UDF Similarity
+    cursor.query("DROP FUNCTION IF EXISTS Similarity;").execute()
+    Similarity_function_query = """CREATE FUNCTION Similarity
                     INPUT (Frame_Array_Open NDARRAY UINT8(3, ANYDIM, ANYDIM),
                            Frame_Array_Base NDARRAY UINT8(3, ANYDIM, ANYDIM),
                            Feature_Extractor_Name TEXT(100))
@@ -88,20 +103,45 @@ def searchForNews(keyword, cursor):
 
 
 
-def LoadPaper(cursor):
+def LoadPaper(keyword, cursor):
+    timestamps = {}
+    t_i = 0
+
+    timestamps[t_i] = perf_counter()
     pdf = os.environ['pdf']
     cursor.query("DROP Table IF EXISTS MyPDF;").execute()
     LoadQuery = f'''LOAD PDF '{pdf}' INTO MyPDF;'''
     cursor.query(LoadQuery).execute()
-    Extract = ""
     context_list = []
+    context = ""
+    res_batch = cursor.query(
+        f"""SELECT data FROM MyPDF
+        ORDER BY Similarity(SentenceFeatureExtractor('{keyword}'),features)
+        LIMIT 5;"""
+    ).execute()
     for i in range(len(res_batch)):
-        context_list.append(res_batch.frames[f"{story_feat_table.lower()}.data"][i])
+        context_list.append(res_batch.frames["MyPDF.data"][i])
     context = "\n".join(context_list)
+    question = """You are given a block of disorganized text extracted from the GitHub user profile of a user using an automated web scraper. The goal is to get structured results from this data."""
+    t_i = t_i + 1
+    timestamps[t_i] = perf_counter()
+    cursor.query(f"""
+    SELECT ChatGPT(
+    question
+    )
+
+    FROM '{context}';
+    """).df()
 
 
 
 if __name__ == "__main__":
-    user_input = receive_user_input()
-    cursor = evadb.connect().cursor()
-    searchForNews(user_input, cursor)
+    user_input, need = receive_user_input()
+    if (need == 's'):
+        cursor = evadb.connect().cursor()
+        searchForNews(user_input, cursor)
+    elif (need == 'p'):
+        cursor = evadb.connect().cursor()
+        LoadPaper(user_input, cursor)
+    else:
+        print("Wrong input, please try again.")

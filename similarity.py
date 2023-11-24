@@ -14,11 +14,11 @@
 # limitations under the License.
 import pandas as pd
 
-from evadb.udfs.abstract.abstract_udf import AbstractUDF
+from evadb.functions.abstract.abstract_function import AbstractFunction
 from evadb.utils.generic_utils import try_to_import_faiss
 
 
-class Similarity(AbstractUDF):
+class Similarity(AbstractFunction):
     def _get_distance(self, numpy_distance):
         return numpy_distance[0][0]
 
