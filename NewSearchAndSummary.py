@@ -15,16 +15,19 @@ MAX_CHUNK_SIZE = 10000
 
 def receive_user_input():
     print(
-        '''Welcome! This app lets you to search for your most insterested news and gives you summary and link. You need to provide your Serper API key , OpenAI API key and keywords.'''
+        '''Welcome! This app lets you to search for the most relevant papers to the paper you provided and summarize the main tool used in the papers. 
+        To use this app, you need to save your pdf of the paper into the same directory as this file and provide your OpenAI API key.'''
     )
     SerperAPI = str(input(
             "Please enter your Serper API key: "))
+    pdfFile = str(input(
+            "Please enter your pdf path name: "))
     url = 'https://api.example.com/data'
-    OpenAPI = str(
-        input(
-            "Please enter your OpenAI API key: "
-        )
-    )
+    # OpenAPI = str(
+    #     input(
+    #         "Please enter your OpenAI API key: "
+    #     )
+    # )
     keyWord = str(
         input(
             "Please enter your key word: "
@@ -32,9 +35,9 @@ def receive_user_input():
     )
 
 
-
+    os.environ['pdf'] = pdfFile
     os.environ["SERPER_KEY"] = SerperAPI
-    os.environ["OPEN_KEY"] = OpenAPI
+    # os.environ["OPEN_KEY"] = OpenAPI
     return keyWord
 
 def searchForNews(keyword, cursor):
@@ -82,6 +85,19 @@ def searchForNews(keyword, cursor):
 
     # Execute the query using the cursor
     print(cursor.query(query).execute())
+
+
+
+def LoadPaper(cursor):
+    pdf = os.environ['pdf']
+    cursor.query("DROP Table IF EXISTS MyPDF;").execute()
+    LoadQuery = f'''LOAD PDF '{pdf}' INTO MyPDF;'''
+    cursor.query(LoadQuery).execute()
+    Extract = ""
+    context_list = []
+    for i in range(len(res_batch)):
+        context_list.append(res_batch.frames[f"{story_feat_table.lower()}.data"][i])
+    context = "\n".join(context_list)
 
 
 
