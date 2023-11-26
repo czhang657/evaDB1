@@ -122,12 +122,12 @@ def LoadPaper(keyword, cursor):
     for i in range(len(res_batch)):
         context_list.append(res_batch.frames["MyPDF.data"][i])
     context = "\n".join(context_list)
-    question = """You are given a block of disorganized text extracted from the GitHub user profile of a user using an automated web scraper. The goal is to get structured results from this data."""
+    question = """You are given a block of disorganized text extracted from an academic paper. The goal is to get a table of 5 relevant academic papers: their titles, links and summaries."""
     t_i = t_i + 1
     timestamps[t_i] = perf_counter()
     cursor.query(f"""
     SELECT ChatGPT(
-    question
+    '{question}'
     )
 
     FROM '{context}';
